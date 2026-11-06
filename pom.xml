@@ -74,25 +74,26 @@
 						</plugin>
 					</plugins>
 				</configuration>
-                <plugin>
-                    <groupId>org.owasp</groupId>
-                    <artifactId>dependency-check-maven</artifactId>
-                    <version>12.2.2</version>
-                    <configuration>
-                        <!-- CVSS 7.0 이상(High·Critical) 취약점이 있으면 빌드 실패 -->
-                        <failBuildOnCVSS>7</failBuildOnCVSS>
-                        <!-- API 키는 코드에 적지 않고 환경변수에서 읽음 -->
-                        <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
-                        <!-- 별도 계정이 필요한 Sonatype OSS Index 분석기는 끔 -->
-                        <ossIndexAnalyzerEnabled>false</ossIndexAnalyzerEnabled>
-                        <!-- 사람이 볼 HTML, 도구 연동용 XML 리포트 생성 -->
-                        <formats>
-                            <format>HTML</format>
-                            <format>XML</format>
-                        </formats>
-                    </configuration>
-                </plugin>
 			</plugin>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <!-- SCA: 라이브러리의 알려진 취약점(CVE)을 NVD 데이터와 비교 -->
+                <artifactId>dependency-check-maven</artifactId>
+                <version>12.2.2</version>
+                <configuration>
+                    <!-- CVSS 7.0 이상(High·Critical) 취약점이 있으면 빌드 실패 -->
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                    <!-- API 키는 코드에 적지 않고 환경변수에서 읽음 -->
+                    <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+                    <!-- 별도 계정이 필요한 Sonatype OSS Index 분석기는 끔 -->
+                    <ossIndexAnalyzerEnabled>false</ossIndexAnalyzerEnabled>
+                    <!-- 사람이 볼 HTML, 도구 연동용 XML 리포트 생성 -->
+                    <formats>
+                        <format>HTML</format>
+                        <format>XML</format>
+                    </formats>
+                </configuration>
+            </plugin>
 		</plugins>
 	</build>
 
