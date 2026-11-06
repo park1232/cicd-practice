@@ -31,10 +31,10 @@ pipeline {
                 }
             }
         }
-        // 모든 검사를 통과한 jar만 보관
+        // 보관 대상을 앱 jar로 한정
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'target/cicd-practice-*.jar', fingerprint: true
             }
         }
     }
