@@ -16,6 +16,16 @@ pipeline {
                 }
             }
         }
+        stage('SAST (SpotBugs)') {
+            steps {
+                sh './mvnw -B spotbugs:check'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'target/spotbugsXml.xml', allowEmptyArchive: true
+                }
+            }
+        }
         stage('Archive') {
             steps {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
