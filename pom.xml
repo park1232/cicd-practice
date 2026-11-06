@@ -47,11 +47,10 @@
             <version>4.8.6</version>
             <scope>provided</scope>
         </dependency>
-        <!-- 실습용: Log4Shell(CVE-2021-44228) 취약 버전 -->
+        <!-- CVE-2021-44228 조치: 버전 고정 제거, Spring Boot 관리 버전 사용 -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.14.1</version>
         </dependency>
 	</dependencies>
 
