@@ -31,6 +31,20 @@ pipeline {
                 }
             }
         }
+        // SCA 게이트: 라이브러리에 CVSS 7 이상 취약점이 있으면 빌드 실패
+                stage('SCA (Dependency-Check)') {
+                    steps {
+                        // Jenkins에 저장된 nvd-api-key를 이 단계 안에서만 환경변수로 꺼내 씀
+                        withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                            sh './mvnw -B dependency-check:check'
+                        }
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'target/dependency-check-report.*', allowEmptyArchive: true
+                        }
+                    }
+                }
         // 보관 대상을 앱 jar로 한정
         stage('Archive') {
             steps {
