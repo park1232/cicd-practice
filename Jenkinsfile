@@ -52,6 +52,14 @@ pipeline {
                         }
                     }
                 }
+                // 이미지 스캔: 앱을 Docker 이미지로 만들고 OS 패키지·라이브러리의 HIGH/CRITICAL 취약점이 있으면 빌드 실패
+                stage('Image Scan (Trivy)') {
+                    steps {
+                        sh 'docker build -t cicd-practice:$BUILD_NUMBER .'
+                        // 취약점 DB는 trivy-cache 볼륨에 저장해 다음 빌드부터 다시 받지 않음
+                        sh 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache/ aquasec/trivy:0.58.1 image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress cicd-practice:$BUILD_NUMBER'
+                    }
+                }
         // 보관 대상을 앱 jar로 한정
         stage('Archive') {
             steps {
