@@ -8,6 +8,13 @@ pipeline {
     }
 
     stages {
+        // 시크릿 탐지: 코드와 커밋 이력에서 키·비밀번호 노출을 찾으면 빌드 실패
+        stage('Secret Scan (gitleaks)') {
+            steps {
+                // Jenkins 작업공간을 gitleaks 컨테이너에 그대로 연결(--volumes-from)해 검사
+                sh 'docker run --rm --volumes-from jenkins zricethezav/gitleaks:v8.21.2 git --redact --no-banner "$WORKSPACE"'
+            }
+        }
         // 컴파일 + 단위 테스트, 결과를 Jenkins 테스트 리포트로 등록
         stage('Build & Test') {
             steps {
