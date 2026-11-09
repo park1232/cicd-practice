@@ -1,0 +1,4 @@
+# 2026-11-09 practice fake AWS key (aws-access-token). Treated as revoked; key value removed in commit 9c98df2.
+# Exceptions apply only to these 2 historical commits. Any new key appearing in another commit/file is still detected.
+b26717dd6e82c579c813539d086aee53075e69ac:src/main/resources/application.properties:aws-access-token:3
+d7cbc13c9f1394562bd12201214da7121a8c27ff:src/main/resources/application.properties:aws-access-token:3
