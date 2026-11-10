@@ -1,5 +1,6 @@
 package com.example.cicd_practice;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +25,10 @@ public class OrderController {
         if (order == null) {
             return ResponseEntity.notFound().build();
         }
-        // 일부러 취약하게: 누구의 주문인지 확인하지 않고 그대로 돌려준다
+        // 조치: 요청한 사용자가 주문의 주인이 아니면 접근 거부
+        if (!order.owner().equals(user)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(order);
     }
 }
