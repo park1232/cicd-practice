@@ -99,6 +99,16 @@
                     </formats>
                 </configuration>
             </plugin>
+            <!-- SBOM: 앱이 쓰는 라이브러리 전체 목록을 CycloneDX 형식으로 생성 -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>2.9.1</version>
+                <configuration>
+                    <outputFormat>json</outputFormat>
+                    <outputName>bom</outputName>
+                </configuration>
+            </plugin>
 		</plugins>
 	</build>
 

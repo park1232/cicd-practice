@@ -89,6 +89,23 @@ pipeline {
                         }
                     }
                 }
+                // SBOM: 라이브러리 목록을 만들어 Dependency-Track에 올림(이후 새 CVE가 나와도 추적됨)
+                stage('SBOM (Dependency-Track)') {
+                    steps {
+                        sh './mvnw -B cyclonedx:makeBom'
+                        // API 키는 이 단계 안에서만 환경변수로 꺼내 씀
+                        withCredentials([string(credentialsId: 'dtrack-api-key', variable: 'DT_API_KEY')]) {
+                            sh '''
+                                curl -sS --fail -X POST http://host.docker.internal:8091/api/v1/bom \
+                                    -H "X-Api-Key: $DT_API_KEY" \
+                                    -F "autoCreate=true" \
+                                    -F "projectName=cicd-practice" \
+                                    -F "projectVersion=main" \
+                                    -F "bom=@target/bom.json"
+                            '''
+                        }
+                    }
+                }
         // 보관 대상을 앱 jar로 한정
         stage('Archive') {
             steps {
