@@ -7,6 +7,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import java.time.Instant;
+import java.util.Base64;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -18,6 +25,9 @@ class OrderAuthorizationTests {
 
     @Autowired
     MockMvc mockMvc;
+
+    @Autowired
+    JwtEncoder jwtEncoder;
 
     // /login 으로 실제 토큰을 발급받는다
     private String login(String username, String password) throws Exception {
@@ -65,6 +75,31 @@ class OrderAuthorizationTests {
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"alice\",\"password\":\"wrong\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // 서명 없는 토큰(alg=none)으로 bob 행세해도 401
+    @Test
+    void unsignedTokenIsUnauthorized() throws Exception {
+        Base64.Encoder b64 = Base64.getUrlEncoder().withoutPadding();
+        String header = b64.encodeToString("{\"alg\":\"none\"}".getBytes());
+        String payload = b64.encodeToString("{\"sub\":\"bob\"}".getBytes());
+        mockMvc.perform(get("/api/orders/2").header("Authorization", "Bearer " + header + "." + payload + "."))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // 정상 서명이어도 만료된 토큰은 401
+    @Test
+    void expiredTokenIsUnauthorized() throws Exception {
+        Instant now = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .subject("alice")
+                .issuedAt(now.minusSeconds(1800))
+                .expiresAt(now.minusSeconds(900))
+                .build();
+        String token = jwtEncoder.encode(
+                JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
+        mockMvc.perform(get("/api/orders/1").header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
     }
 }
