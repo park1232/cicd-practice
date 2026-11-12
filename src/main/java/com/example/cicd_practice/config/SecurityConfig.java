@@ -1,4 +1,4 @@
-package com.example.cicd_practice;
+package com.example.cicd_practice.config;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +23,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -31,6 +32,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     // 요청이 컨트롤러에 닿기 전에 거치는 보안 필터 체인

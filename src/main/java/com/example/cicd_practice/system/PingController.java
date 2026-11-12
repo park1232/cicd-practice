@@ -1,4 +1,4 @@
-package com.example.cicd_practice;
+package com.example.cicd_practice.system;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.regex.Pattern;

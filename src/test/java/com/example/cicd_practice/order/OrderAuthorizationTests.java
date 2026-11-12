@@ -1,4 +1,4 @@
-package com.example.cicd_practice;
+package com.example.cicd_practice.order;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;

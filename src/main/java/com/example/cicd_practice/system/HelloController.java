@@ -1,4 +1,4 @@
-package com.example.cicd_practice;
+package com.example.cicd_practice.system;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
