@@ -7,6 +7,7 @@ Jenkins 파이프라인에 보안 검사 단계를 붙여보려고 만든 연습
 ## 구성
 
 - Spring Boot 4.1.2 / Java 17 / Maven Wrapper
+- 인증·인가: Spring Security 7.1.2 (JWT는 `oauth2-resource-server`, nimbus-jose-jwt 10.9.1)
 - Jenkins LTS (Docker, 로컬)
 - 시크릿 탐지: gitleaks 8.21.2
 - SAST: SpotBugs 4.8.6.6 + FindSecBugs 1.13.0
@@ -97,6 +98,7 @@ docker run -d --name dtrack-frontend -p 8092:8080 -e API_BASE_URL=http://localho
 
 - #19 실패: 보안 헤더 4건 FAIL (10020, 10021, 10038, 10063)
 - 필터로 X-Content-Type-Options, X-Frame-Options, CSP 등을 추가 → #20 통과 (FAIL 0, PASS 65, WARN 3)
+- 이후 필터를 지우고 Spring Security `http.headers`로 같은 헤더를 옮김 (#32). ZAP 결과 FAIL 0, WARN 3 그대로. 헤더 4종은 단위 테스트(`SecurityHeadersTests`)로도 고정
 
 ### 권한 - BOLA
 
@@ -105,6 +107,23 @@ docker run -d --name dtrack-frontend -p 8092:8080 -e API_BASE_URL=http://localho
 - #21 실패: 다른 사용자의 주문 조회가 403이어야 하는데 200
 - 소유자 검증을 추가 → #22 통과
 - SAST/DAST는 이런 권한 문제를 정상 응답으로 봐서 못 잡는다고 알려져 있음. 이건 직접 스캐너로 돌려본 건 아님
+
+### 인증·인가 - Spring Security
+
+BOLA 예제의 `X-User` 헤더는 클라이언트가 마음대로 바꿀 수 있어서, 인증부터 단계별로 바꿈.
+
+1. 약점 증명: 헤더만 `bob`으로 바꿔서 bob의 주문이 200으로 조회되는 걸 재현
+2. Basic + BCrypt (#28): `SecurityFilterChain`, 메모리 사용자(alice, bob), 비밀번호는 BCrypt 해시로 비교
+3. JWT (#29): `POST /login`에서 HS256 서명 토큰 발급(만료 15분). `Authorization: Bearer`를 `oauth2ResourceServer`가 검증
+4. `@PostAuthorize` (#30): 컨트롤러의 `if`를 `OrderService`의 `@PostAuthorize`로 이동. `@EnableMethodSecurity`가 없으면 어노테이션이 조용히 무시되는 걸 확인
+5. 테스트 (#31): 본인 200, 남의 주문 403, 토큰 없음·위조·만료·`alg=none`·틀린 비밀번호 401
+6. 보안 헤더 (#32): 직접 만든 필터를 `http.headers`로 대체
+
+- 서명 키는 코드에 안 넣음. 환경변수 `APP_JWT_SECRET`이 있으면 쓰고, 없으면 기동 때 무작위 생성(재시작하면 기존 토큰 무효)
+- 디코더는 HS256만 허용해서 `alg=none` 위조 토큰을 거부
+- SpotBugs가 `new SecureRandom().nextBytes(...)`를 `DMI_RANDOM_USED_ONLY_ONCE`로 잡아서 `KeyGenerator`로 교체
+- 변이 실험: 방어를 일부러 빼고 테스트가 실패하는지 확인. `@EnableMethodSecurity` 제거, `@PostAuthorize` 제거 → 둘 다 `otherUserCannotReadOrder`가 403 대신 200으로 실패. `/api/**`를 `permitAll`로 바꿔도 `@PostAuthorize`가 막아서 통과(방어 2겹). 만료 검증을 끄면 `expiredTokenIsUnauthorized`가 실패
+- 패키지는 `auth`, `order`, `config`, `system`으로 나눔
 
 ### SBOM - Dependency-Track
 
@@ -126,11 +145,14 @@ CycloneDX로 SBOM(42개 컴포넌트)을 만들어 Dependency-Track에 업로드
 - Jenkins 컨테이너 안에서 `localhost:8091`로는 호스트의 Dependency-Track에 못 붙음. `host.docker.internal`로 바꿈
 - Dependency-Track 관리자 비밀번호를 몰라 볼륨을 새로 만듦
 - 권한 `+` 버튼에서 뜬 "Not Modified (304)"를 404로 착각. 이미 있는 권한이라 중복 추가한 것
+- SpotBugs가 JWT 키 생성 코드(`new SecureRandom().nextBytes`)에서 실패. 일회용 난수 객체 패턴이라 `KeyGenerator`로 바꿈
 
 ## 아쉬운 점
 
 - 예외 처리에 사유만 남겼는데, 실제로 쓰려면 누가 승인했는지랑 만료일도 같이 관리해야 할 듯
 - 지금은 Jenkins 컨트롤러에서 바로 빌드함. 제대로 하려면 agent 분리
 - Jenkins가 호스트의 `docker.sock`을 마운트해서 씀. 호스트 root급 권한이라 실무에선 에이전트 분리나 Kaniko 같은 방식이 필요함
-- BOLA는 헤더로 사용자를 구분하는 단순화한 예제라 실제 인증(JWT 등)과는 다름
+- 인증은 Spring Security + JWT로 바꿨지만 단순화한 부분이 남음: 로그인 시도 횟수 제한 없음, 토큰 폐기(로그아웃) 불가, 사용자·비밀번호가 코드 안 메모리에 있음(실제로는 DB)
+- ZAP이 BOLA를 못 잡는다는 건 여전히 직접 측정하지 않음. 권한 문제는 테스트 코드로 지키는 쪽으로 정리
+- 서명 키가 대칭키(HS256)라 발급·검증이 같은 키를 씀. 서비스가 나뉘면 비대칭키(RS256)가 필요
 - Dependency-Track 알림(Slack 등)이나 정책(Policy) 기반 게이트는 아직 안 해봄
