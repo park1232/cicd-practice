@@ -43,6 +43,11 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 브라우저 폼이 없는 API라 CSRF 토큰 사용 안 함
                 .csrf(AbstractHttpConfigurer::disable)
+                // 보안 헤더: nosniff·X-Frame-Options는 기본값, CSP·Permissions-Policy는 직접 지정 (ZAP 10020·10021·10038·10063)
+                .headers(h -> h
+                        .frameOptions(f -> f.deny())
+                        .contentSecurityPolicy(c -> c.policyDirectives("default-src 'self'; frame-ancestors 'none'"))
+                        .permissionsPolicyHeader(p -> p.policy("camera=(), microphone=(), geolocation=()")))
                 .authorizeHttpRequests(auth -> auth
                         // 점검용 화면·응답은 로그인 없이 허용 (ZAP baseline이 접근)
                         .requestMatchers("/", "/index.html", "/hello").permitAll()
