@@ -102,4 +102,25 @@ class OrderAuthorizationTests {
         mockMvc.perform(get("/api/orders/1").header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
     }
+
+    // 관리자는 관리자 API를 볼 수 있다
+    @Test
+    void adminCanReadAdminApi() throws Exception {
+        mockMvc.perform(get("/api/admin/orders").header("Authorization", "Bearer " + login("admin", "admin-pw")))
+                .andExpect(status().isOk());
+    }
+
+    // 일반 사용자는 관리자 API가 403
+    @Test
+    void userCannotReadAdminApi() throws Exception {
+        mockMvc.perform(get("/api/admin/orders").header("Authorization", "Bearer " + login("alice", "alice-pw")))
+                .andExpect(status().isForbidden());
+    }
+
+    // 토큰이 없으면 관리자 API도 401
+    @Test
+    void noTokenCannotReadAdminApi() throws Exception {
+        mockMvc.perform(get("/api/admin/orders"))
+                .andExpect(status().isUnauthorized());
+    }
 }

@@ -8,7 +8,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -21,6 +20,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -53,13 +54,26 @@ public class SecurityConfig {
                         .requestMatchers("/", "/index.html", "/hello").permitAll()
                         // 로그인 API는 토큰이 없는 상태에서 호출
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
+                        // 관리자 API는 ADMIN 역할만 (일반 사용자는 403)
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // 주문 API는 유효한 토큰 필수
                         .requestMatchers("/api/**").authenticated()
                         // 그 외 모든 경로는 거부
                         .anyRequest().denyAll())
                 // Authorization: Bearer <JWT> 를 읽어 서명·만료를 검증 (실패 시 401)
-                .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()));
+                .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
+    }
+
+    // 토큰의 roles 클레임("ROLE_USER" 형태)을 그대로 권한으로 사용
+    @Bean
+    JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
+        authorities.setAuthoritiesClaimName("roles");
+        authorities.setAuthorityPrefix("");
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authorities);
+        return converter;
     }
 
     // 비밀번호는 평문이 아니라 BCrypt 해시로 저장·비교
@@ -73,7 +87,8 @@ public class SecurityConfig {
     UserDetailsService userDetailsService(PasswordEncoder encoder) {
         return new InMemoryUserDetailsManager(
                 User.withUsername("alice").password(encoder.encode("alice-pw")).roles("USER").build(),
-                User.withUsername("bob").password(encoder.encode("bob-pw")).roles("USER").build());
+                User.withUsername("bob").password(encoder.encode("bob-pw")).roles("USER").build(),
+                User.withUsername("admin").password(encoder.encode("admin-pw")).roles("ADMIN").build());
     }
 
     // /login 에서 아이디·비밀번호를 검증하는 인증 관리자

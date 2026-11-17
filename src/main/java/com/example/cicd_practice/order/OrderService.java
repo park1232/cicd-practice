@@ -3,6 +3,7 @@ package com.example.cicd_practice.order;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -13,6 +14,11 @@ public class OrderService {
     private final Map<Long, Order> orders = Map.of(
             1L, new Order(1L, "alice", "노트북"),
             2L, new Order(2L, "bob", "키보드"));
+
+    // 전체 주문 (관리자 API 전용 — 호출 쪽에서 ADMIN 역할을 보장)
+    public List<Order> findAll() {
+        return List.copyOf(orders.values());
+    }
 
     // 반환된 주문의 주인이 로그인 사용자가 아니면 AccessDeniedException (없는 주문은 통과)
     @PostAuthorize("returnObject.isEmpty() or returnObject.get().owner() == authentication.name")
