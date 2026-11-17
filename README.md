@@ -136,14 +136,11 @@ CycloneDX로 SBOM(42개 컴포넌트)을 만들어 Dependency-Track에 업로드
 
 ## 하다가 막혔던 것
 
-- 8080 포트 충돌 → 8081로 변경
 - 처음 플러그인 설치할 때 Pipeline, Git 등이 실패. 로그 보니 미러 서버 타임아웃 2건 때문에 그걸 의존하는 플러그인까지 줄줄이 실패한 거였음. Retry 후 재시작
 - IntelliJ에서 Maven 동기화가 안 됨. wrapper가 Maven 3.10.0이라 IDE가 못 읽음. IDE 설정만 Bundled Maven으로 바꿈
 - `archiveArtifacts 'target/*.jar'`로 했더니 SpotBugs가 받아둔 findsecbugs 플러그인 jar까지 같이 보관됨 → `target/cicd-practice-*.jar`로 좁힘
-- pom.xml에 플러그인 붙여넣다가 다른 플러그인 블록 안에 넣어버려서 Malformed POM 남
 - gitleaks, Trivy를 컨테이너로 돌릴 때 `-v` 경로가 호스트 기준이라 작업공간이 안 보임 → `--volumes-from jenkins`로 해결
 - Jenkins 컨테이너 안에서 `localhost:8091`로는 호스트의 Dependency-Track에 못 붙음. `host.docker.internal`로 바꿈
-- Dependency-Track 관리자 비밀번호를 몰라 볼륨을 새로 만듦
 - 권한 `+` 버튼에서 뜬 "Not Modified (304)"를 404로 착각. 이미 있는 권한이라 중복 추가한 것
 - SpotBugs가 JWT 키 생성 코드(`new SecureRandom().nextBytes`)에서 실패. 일회용 난수 객체 패턴이라 `KeyGenerator`로 바꿈
 
@@ -159,7 +156,7 @@ CycloneDX로 SBOM(42개 컴포넌트)을 만들어 Dependency-Track에 업로드
 
 ## AWS 기초 학습
 
-Jenkins를 로컬에서만 돌려서 클라우드 쪽은 안 해봤음. 계정 만들기 전에 개념부터 정리함. 아직 AWS 계정은 없고 직접 만들어 본 건 없음.
+Jenkins를 로컬에서만 돌려서 클라우드 쪽은 안 해봤음. 개념부터 정리
 
 ### IAM
 - 사용자는 사람·외부 도구의 고정된 신원(영구 키). 역할은 필요할 때 빌려 쓰는 권한 묶음이고 임시 자격증명이 자동 발급됨
@@ -184,7 +181,7 @@ DB   (프라이빗 서브넷)             인바운드 5432 ← 앱의 SG
 
 ### S3, RDS
 - S3 유출 원인은 대부분 버킷 공개 설정 실수. 퍼블릭 액세스 차단을 켜 두고, 외부에 줄 땐 Presigned URL
-- RDS는 Multi-AZ가 가용성(장애 시 자동 전환), 읽기 복제본이 성능(읽기 분산). 처음에 복제본을 가용성이라고 잘못 이해했었음
+- RDS는 Multi-AZ가 가용성(장애 시 자동 전환), 읽기 복제본이 성능(읽기 분산)
 - S3 접근 권한은 IAM 역할, DB 비밀번호는 Secrets Manager. 앱은 역할로 Secrets Manager 읽기 권한을 받음
 - RDS는 멈춰 둬도 스토리지·스냅샷 비용이 남아서 실습 후 삭제해야 함
 
