@@ -1,6 +1,7 @@
 package com.example.cicd_practice.order;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -30,23 +32,22 @@ public class OrderController {
         return orderService.findByOwner(authentication.getName());
     }
 
-    // 소유자 검사는 OrderService의 @PostAuthorize가 담당
+    // 소유자 검사는 OrderService의 @PostAuthorize가 담당, 없는 주문은 404
     @GetMapping("/api/orders/{id}")
-    public ResponseEntity<Order> getOrder(@PathVariable long id) {
+    public Order getOrder(@PathVariable long id) {
         return orderService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "주문이 없습니다."));
     }
 
     // 주문 생성: 소유자는 토큰의 사용자로 고정
     @PostMapping("/api/orders")
-    public ResponseEntity<Order> create(@RequestBody OrderRequest request, Authentication authentication) {
+    public ResponseEntity<Order> create(@Valid @RequestBody OrderRequest request, Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED).body(orderService.create(authentication.getName(), request.item()));
     }
 
     // 주문 수정: 소유자 검사는 OrderService의 @PreAuthorize가 담당
     @PutMapping("/api/orders/{id}")
-    public Order update(@PathVariable long id, @RequestBody OrderRequest request) {
+    public Order update(@PathVariable long id, @Valid @RequestBody OrderRequest request) {
         return orderService.update(id, request.item());
     }
 

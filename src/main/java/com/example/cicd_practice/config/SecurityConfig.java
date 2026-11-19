@@ -1,5 +1,6 @@
 package com.example.cicd_practice.config;
 
+import com.example.cicd_practice.error.SecurityProblemHandler;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +39,7 @@ public class SecurityConfig {
 
     // 요청이 컨트롤러에 닿기 전에 거치는 보안 필터 체인
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, SecurityProblemHandler problemHandler) throws Exception {
         http
                 // 세션을 만들지 않음 (요청마다 토큰으로 인증)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -60,8 +61,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         // 그 외 모든 경로는 거부
                         .anyRequest().denyAll())
+                // 필터 단계의 401·403 응답 본문을 problem+json으로 통일
+                .exceptionHandling(e -> e.authenticationEntryPoint(problemHandler).accessDeniedHandler(problemHandler))
                 // Authorization: Bearer <JWT> 를 읽어 서명·만료를 검증 (실패 시 401)
-                .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                .oauth2ResourceServer(o -> o
+                        .authenticationEntryPoint(problemHandler)
+                        .accessDeniedHandler(problemHandler)
+                        .jwt(j -> j.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
     }
 
